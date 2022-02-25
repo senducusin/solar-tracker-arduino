@@ -81,9 +81,9 @@ void trackManually() {
     servoPin.write(currentFinalValue);
 }
 
-boolean servoShouldMoveWithCalculatedValues(int computedValueA, int computedValueB) {
-    int difference = computedValueA - computedValueB;
-    int diffPercentage = computedValueA * 0.04;
+boolean servoShouldMoveWithCalculatedValues(int valueA, int valueB) {
+    int difference = valueA - valueB;
+    int diffPercentage = valueA * 0.04;
 
     if (diffPercentage <= difference) {
         return true;
