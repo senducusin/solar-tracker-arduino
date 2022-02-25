@@ -95,7 +95,6 @@ boolean servoShouldMoveWithCalculatedValues(int computedValueA, int computedValu
 void decreaseServoStep() {
     if (servoStepValue == 0) return; 
 
-    digitalWrite(ledForAutoIndicator, HIGH);
     servoStepValue--;
     servoPin.write(servoStepValue);
 }
@@ -103,7 +102,6 @@ void decreaseServoStep() {
 void increaseServoStep() {
     if (servoStepValue == 180) return;
 
-    digitalWrite(ledForAutoIndicator, HIGH);
     servoStepValue++;
     servoPin.write(servoStepValue);
 }
