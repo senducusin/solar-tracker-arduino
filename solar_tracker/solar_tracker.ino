@@ -27,7 +27,6 @@ const long ledIndicatorBlinkInterval = 500;
 
 // MARK: - Lifecycle
 void setup() {
-    Serial.begin(9600);
     servoPin.attach(3);
     servoPin.write(servoStepValue);
     pinMode(ledIndicatorPin, OUTPUT);
@@ -45,18 +44,7 @@ void loop() {
             trackSunlightAutomatically();
         }
 
-        if (currentMillis - previousMillisForLedBlink >= ledIndicatorBlinkInterval) {
-            previousMillisForLedBlink = currentMillis;
-
-            if(ledIndicatorState == LOW) {
-                ledIndicatorState = HIGH;
-            } else {
-                ledIndicatorState = LOW;
-            }
-
-            Serial.println(ledIndicatorState);
-            digitalWrite(ledIndicatorPin, ledIndicatorState);
-        }
+        findingSunlightBlinkHandler(currentMillis);
     } else {
         trackManually();
     }
@@ -84,6 +72,20 @@ void trackSunlightAutomatically() {
         trackSunlight(computedValueA, computedValueB);
     } else {
         findSunlight(computedValueA, computedValueB);
+    }
+}
+
+void findingSunlightBlinkHandler(unsigned long currentMillis) {
+    if (currentMillis - previousMillisForLedBlink >= ledIndicatorBlinkInterval) {
+        previousMillisForLedBlink = currentMillis;
+
+        if(ledIndicatorState == LOW) {
+            ledIndicatorState = HIGH;
+        } else {
+            ledIndicatorState = LOW;
+        }
+
+        digitalWrite(ledIndicatorPin, ledIndicatorState);
     }
 }
 
