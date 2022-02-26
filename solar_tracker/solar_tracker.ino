@@ -24,7 +24,6 @@ const long interval = 20;
 
 // MARK: - Lifecycle
 void setup() {
-    Serial.begin(9600);
     servoPin.attach(3);
     servoPin.write(servoStepValue);
     pinMode(ledForAutoIndicator, OUTPUT);
@@ -66,10 +65,6 @@ void trackSunlightAutomatically() {
     int computedValueA = (ldrValueA + ldrValueB) / 2;
     int computedValueB = (ldrValueB + ldrValueC) / 2;
 
-    // Serial.print(computedValueA);
-    // Serial.print(" - ");
-    // Serial.println(computedValueB);
-
     if (didFindSunlight) {
         trackSunlight(computedValueA, computedValueB);
     } else {
@@ -89,10 +84,6 @@ void findSunlight(int valueA, int valueB) {
     if (highestValue > recordedHighestSunlight) {
         recordedHighestSunlight = highestValue;
     }
-
-        Serial.print(highestValue);
-    Serial.print(" - ");
-    Serial.println(recordedHighestSunlight);
 
     if (recordedHighestSunlight >= targetSunlight) {
         didFindSunlight = true;
