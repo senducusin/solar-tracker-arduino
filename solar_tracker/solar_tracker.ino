@@ -5,18 +5,22 @@
 Servo servoPin;
 
 // Pinouts
-int ledForAutoIndicator = 2;
-int potentiometerPin = A0;
-int buttonPin = 4;
+const int ledForAutoIndicator = 2;
+const int potentiometerPin = A0;
+const int buttonPin = 4;
 
 // Default Values
 bool autoTrack = true;
+bool didFindSunlight = false;
+bool findSunlightInReverse = false;
 int servoStepValue = 0;
 int buttonState = LOW;
+int targetSunlight = 960;
+int recordedHighestSunlight = 0;
 
 // Delay Handling
 unsigned long previousMillis = 0;
-const long interval = 15;
+const long interval = 20;
 
 // MARK: - Lifecycle
 void setup() {
@@ -25,6 +29,7 @@ void setup() {
     servoPin.write(servoStepValue);
     pinMode(ledForAutoIndicator, OUTPUT);
     pinMode(buttonPin, INPUT);
+    delay(1000);
 }
 
 void loop() {   
@@ -61,12 +66,69 @@ void trackSunlightAutomatically() {
     int computedValueA = (ldrValueA + ldrValueB) / 2;
     int computedValueB = (ldrValueB + ldrValueC) / 2;
 
-    if (computedValueA > computedValueB) {
-        if (servoShouldMoveWithCalculatedValues(computedValueA, computedValueB)) {
+    // Serial.print(computedValueA);
+    // Serial.print(" - ");
+    // Serial.println(computedValueB);
+
+    if (didFindSunlight) {
+        trackSunlight(computedValueA, computedValueB);
+    } else {
+        findSunlight(computedValueA, computedValueB);
+    }
+}
+
+void findSunlight(int valueA, int valueB) {
+    int highestValue = 0;
+
+    if (valueA > valueB) {
+        highestValue = valueA;
+    } else {
+        highestValue = valueB;
+    }
+
+    if (highestValue > recordedHighestSunlight) {
+        recordedHighestSunlight = highestValue;
+    }
+
+        Serial.print(highestValue);
+    Serial.print(" - ");
+    Serial.println(recordedHighestSunlight);
+
+    if (recordedHighestSunlight >= targetSunlight) {
+        didFindSunlight = true;
+    } else {
+
+        if (findSunlightInReverse) {
+            servoStepValue--;
+
+            if (servoStepValue == 0) {
+                findSunlightInReverse = false;
+                targetSunlight = recordedHighestSunlight;
+                recordedHighestSunlight = 0;
+            }
+
+        } else {
+            servoStepValue++;
+
+            if (servoStepValue == 180) {
+                findSunlightInReverse = true;
+                targetSunlight = recordedHighestSunlight;
+                recordedHighestSunlight = 0;
+            }
+        }
+
+        servoPin.write(servoStepValue);
+    }
+}
+
+
+void trackSunlight(int valueA, int valueB) {
+    if (valueA > valueB) {
+        if (servoShouldMoveWithCalculatedValues(valueA, valueB)) {
             increaseServoStep();
         }
-    } else if (computedValueA < computedValueB) {
-        if (servoShouldMoveWithCalculatedValues(computedValueB, computedValueA)) {
+    } else if (valueA < valueB) {
+        if (servoShouldMoveWithCalculatedValues(valueB, valueA)) {
             decreaseServoStep();
         }
     }
@@ -74,22 +136,19 @@ void trackSunlightAutomatically() {
 
 void trackManually() {
     digitalWrite(ledForAutoIndicator, LOW);
+    didFindSunlight = true;
 
-    int currentFinalValue = analogRead(potentiometerPin);
-    currentFinalValue = map(currentFinalValue, 0, 1023, 0, 180);
+    servoStepValue = analogRead(potentiometerPin);
+    servoStepValue = map(servoStepValue, 0, 1023, 0, 180);
 
-    servoPin.write(currentFinalValue);
+    servoPin.write(servoStepValue);
 }
 
 boolean servoShouldMoveWithCalculatedValues(int valueA, int valueB) {
     int difference = valueA - valueB;
-    int diffPercentage = valueA * 0.04;
+    int diffPercentage = valueA * 0.01;
 
-    if (diffPercentage <= difference) {
-        return true;
-    }
-
-    return false;
+    return diffPercentage <= difference;
 }
 
 void decreaseServoStep() {
