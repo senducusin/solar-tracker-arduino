@@ -35,6 +35,7 @@ void setup() {
 }
 
 void loop() {   
+    // servoPin.write(90);
     buttonHandler();
 
     if (autoTrack) {
