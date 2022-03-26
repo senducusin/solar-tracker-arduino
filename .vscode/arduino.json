@@ -1,6 +1,6 @@
 {
     "board": "arduino:avr:uno",
     "programmer": "arduino:avrispmkii",
-    "port": "/dev/tty.usbmodem141101",
+    "port": "/dev/tty.usbserial-14130",
     "sketch": "solar_tracker/solar_tracker.ino"
 }

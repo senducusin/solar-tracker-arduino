@@ -18,6 +18,10 @@ int buttonState = LOW;
 int ledIndicatorState = LOW;
 int targetSunlight = 960;
 int recordedHighestSunlight = 0;
+int trackedValuesA[20];
+int trackedValuesB[20];
+int trackingIndex = 0;
+float tolerance = 0.028;
 
 // Delay Handling
 unsigned long previousMillisForLedBlink = 0;
@@ -31,11 +35,16 @@ void setup() {
     servoPin.write(servoStepValue);
     pinMode(ledIndicatorPin, OUTPUT);
     pinMode(buttonPin, INPUT);
+    Serial.begin(9600);
     delay(1000);
 }
 
 void loop() {   
+    // MARK: - For Debugging only!
     // servoPin.write(90);
+    // ldrChecker();
+
+    // MARK - Main Loop logic
     buttonHandler();
 
     if (autoTrack) {
@@ -52,6 +61,15 @@ void loop() {
 }
 
 // MARK: - Helpers
+void ldrChecker() {
+    Serial.print(analogRead(A1));
+    Serial.print("-");
+    Serial.print(analogRead(A2));
+    Serial.print("-");
+    Serial.println(analogRead(A3));
+    delay(1000);
+}
+
 void buttonHandler() {
     if (digitalRead(buttonPin) == HIGH && buttonState == LOW) {
         buttonState = HIGH;
@@ -136,14 +154,34 @@ void sweep() {
 void trackSunlight(int valueA, int valueB) {
     digitalWrite(ledIndicatorPin, HIGH);
 
-    if (valueA > valueB) {
-        if (servoShouldMoveWithCalculatedValues(valueA, valueB)) {
-            increaseServoStep();
+    trackedValuesA[trackingIndex] = valueA;
+    trackedValuesB[trackingIndex] = valueB;
+
+    if (trackingIndex == 19) {
+        int averageValuesA = 0;
+        int averageValuesB = 0;
+
+        for(int index = 0; index < trackingIndex; index++) {
+            averageValuesA += trackedValuesA[trackingIndex];
+            averageValuesB += trackedValuesB[trackingIndex];
         }
-    } else if (valueA < valueB) {
-        if (servoShouldMoveWithCalculatedValues(valueB, valueA)) {
-            decreaseServoStep();
+
+        averageValuesA /= trackingIndex;
+        averageValuesB /= trackingIndex;
+
+        if (averageValuesA > averageValuesB) {
+            if (shouldServoMoveWithCalculatedValues(averageValuesA, averageValuesB)) {
+                increaseServoStep();
+            }
+        } else if (averageValuesA < averageValuesB) {
+            if (shouldServoMoveWithCalculatedValues(averageValuesB, averageValuesA)) {
+                decreaseServoStep();
+            }
         }
+        
+        trackingIndex = 0;
+    } else {
+        trackingIndex++;
     }
 }
 
@@ -157,9 +195,9 @@ void trackManually() {
     servoPin.write(servoStepValue);
 }
 
-boolean servoShouldMoveWithCalculatedValues(int valueA, int valueB) {
+boolean shouldServoMoveWithCalculatedValues(int valueA, int valueB) {
     int difference = valueA - valueB;
-    int diffPercentage = valueA * 0.01;
+    int diffPercentage = valueA * tolerance;
 
     return diffPercentage <= difference;
 }
