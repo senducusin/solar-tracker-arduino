@@ -1,2 +1,2 @@
 # solar-tracker-arduino
-Used to drive an Arduino-based solar tracker.
+Use to drive an Arduino-based solar tracker.
