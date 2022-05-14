@@ -8,12 +8,17 @@ Servo servoPin;
 const int ledIndicatorPin = 2;
 const int potentiometerPin = A0;
 const int buttonPin = 4;
+const int sweepRightPin = 10;
+const int sweepLeftPin = 11;
+const int enableManualSweepPin = 12;
 
 // Default Values
 bool autoTrack = true;
 bool didFindSunlight = false;
 bool findSunlightInReverse = false;
-int servoStepValue = 0;
+int minimumSweep = 58;
+int maximumSweep = 138;
+int servoStepValue = 98;
 int buttonState = LOW;
 int ledIndicatorState = LOW;
 int targetSunlight = 960;
@@ -21,11 +26,15 @@ int recordedHighestSunlight = 0;
 int trackedValuesA[20];
 int trackedValuesB[20];
 int trackingIndex = 0;
-float tolerance = 0.028;
+int numberOfSteps = 1;
+int averageValues = 10;
+float tolerance = 0.023;
 
 // Delay Handling
 unsigned long previousMillisForLedBlink = 0;
 unsigned long previousMillis = 0;
+unsigned long previousMillisForManualSweep = 0;
+const long manualSweepInterval = 100;
 const long interval = 20;
 const long ledIndicatorBlinkInterval = 500;
 
@@ -35,19 +44,20 @@ void setup() {
     servoPin.write(servoStepValue);
     pinMode(ledIndicatorPin, OUTPUT);
     pinMode(buttonPin, INPUT);
+    pinMode(sweepLeftPin, INPUT);
+    pinMode(sweepRightPin, INPUT);
+    pinMode(enableManualSweepPin, INPUT);
     Serial.begin(9600);
     delay(1000);
 }
 
 void loop() {   
-    // MARK: - For Debugging only!
-    // servoPin.write(90);
-    // ldrChecker();
-
     // MARK - Main Loop logic
     buttonHandler();
 
-    if (autoTrack) {
+    if (digitalRead(enableManualSweepPin) == HIGH) {
+        manualSweepHandler();
+    } else if (autoTrack) {
         unsigned long currentMillis = millis();
         if (currentMillis - previousMillis >= interval) {
             previousMillis = currentMillis;
@@ -61,13 +71,16 @@ void loop() {
 }
 
 // MARK: - Helpers
-void ldrChecker() {
-    Serial.print(analogRead(A1));
-    Serial.print("-");
-    Serial.print(analogRead(A2));
-    Serial.print("-");
-    Serial.println(analogRead(A3));
-    delay(1000);
+void manualSweepHandler() {
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillisForManualSweep >= manualSweepInterval) {
+        previousMillisForManualSweep = currentMillis;
+        if (digitalRead(sweepLeftPin) == HIGH) {
+            decreaseServoStep();
+        } else if (digitalRead(sweepRightPin) == HIGH) {
+            increaseServoStep();
+        }
+    }
 }
 
 void buttonHandler() {
@@ -134,7 +147,7 @@ void sweep() {
     if (findSunlightInReverse) {
         decreaseServoStep();
 
-        if (servoStepValue == 0) {
+        if (servoStepValue == minimumSweep) {
             findSunlightInReverse = false;
             targetSunlight = recordedHighestSunlight;
             recordedHighestSunlight = 0;
@@ -143,7 +156,7 @@ void sweep() {
     } else {
         increaseServoStep();
 
-        if (servoStepValue == 180) {
+        if (servoStepValue == maximumSweep) {
             findSunlightInReverse = true;
             targetSunlight = recordedHighestSunlight;
             recordedHighestSunlight = 0;
@@ -157,9 +170,9 @@ void trackSunlight(int valueA, int valueB) {
     trackedValuesA[trackingIndex] = valueA;
     trackedValuesB[trackingIndex] = valueB;
 
-    if (trackingIndex == 19) {
-        int averageValuesA = 0;
-        int averageValuesB = 0;
+    if (trackingIndex == averageValues) {
+        float averageValuesA = 0;
+        float averageValuesB = 0;
 
         for(int index = 0; index < trackingIndex; index++) {
             averageValuesA += trackedValuesA[trackingIndex];
@@ -171,11 +184,11 @@ void trackSunlight(int valueA, int valueB) {
 
         if (averageValuesA > averageValuesB) {
             if (shouldServoMoveWithCalculatedValues(averageValuesA, averageValuesB)) {
-                increaseServoStep();
+                decreaseServoStep();
             }
         } else if (averageValuesA < averageValuesB) {
             if (shouldServoMoveWithCalculatedValues(averageValuesB, averageValuesA)) {
-                decreaseServoStep();
+                increaseServoStep();
             }
         }
         
@@ -190,28 +203,36 @@ void trackManually() {
     didFindSunlight = true;
 
     servoStepValue = analogRead(potentiometerPin);
-    servoStepValue = map(servoStepValue, 0, 1023, 0, 180);
+    servoStepValue = map(servoStepValue, 0, 1023, minimumSweep, maximumSweep);
 
     servoPin.write(servoStepValue);
 }
 
-boolean shouldServoMoveWithCalculatedValues(int valueA, int valueB) {
-    int difference = valueA - valueB;
-    int diffPercentage = valueA * tolerance;
+boolean shouldServoMoveWithCalculatedValues(float valueA, float valueB) {
+    float difference = valueA - valueB;
+    float diffPercentage = valueA * tolerance;
 
     return diffPercentage <= difference;
 }
 
 void decreaseServoStep() {
-    if (servoStepValue == 0) return; 
+    if (servoStepValue == minimumSweep) return; 
 
-    servoStepValue--;
+    if (servoStepValue < minimumSweep) {
+        servoStepValue = minimumSweep;
+    }
+    
+    servoStepValue -= numberOfSteps;
     servoPin.write(servoStepValue);
 }
 
 void increaseServoStep() {
-    if (servoStepValue == 180) return;
+    if (servoStepValue == maximumSweep) return;
 
-    servoStepValue++;
+    if (servoStepValue > maximumSweep) {
+        servoStepValue = maximumSweep;
+    }
+
+    servoStepValue += numberOfSteps;
     servoPin.write(servoStepValue);
 }
