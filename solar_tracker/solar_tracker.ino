@@ -18,7 +18,7 @@ bool didFindSunlight = false;
 bool findSunlightInReverse = false;
 int minimumSweep = 58;
 int maximumSweep = 138;
-int servoStepValue = 98;
+int servoStepValue = 0;
 int buttonState = LOW;
 int ledIndicatorState = LOW;
 int targetSunlight = 960;
@@ -40,6 +40,7 @@ const long ledIndicatorBlinkInterval = 500;
 
 // MARK: - Lifecycle
 void setup() {
+    servoStepValue = minimumSweep;
     servoPin.attach(3);
     servoPin.write(servoStepValue);
     pinMode(ledIndicatorPin, OUTPUT);
@@ -48,7 +49,7 @@ void setup() {
     pinMode(sweepRightPin, INPUT);
     pinMode(enableManualSweepPin, INPUT);
     Serial.begin(9600);
-    delay(1000);
+    delay(2500);
 }
 
 void loop() {   
